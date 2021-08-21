@@ -28,7 +28,7 @@ class LaunchWheels:
         self.left_PID.set_min_power(-0.25)
         self.left_PID.set_target(0)  # aim for 0 RPM dif
 
-        self.right_PID = PID(left_PID.P, left_PID.I, left_PID.D)
+        self.right_PID = PID(self.left_PID.P, self.left_PID.I, self.left_PID.D)
         self.right_PID.set_max_power(0.25)
         self.right_PID.set_min_power(-0.25)
         self.right_PID.set_target(0)  # aim for 0 RPM dif
@@ -66,7 +66,7 @@ class LaunchWheels:
                 #print(self.left_duty.getFrequency()*60)
                 #print(self.right_duty.getFrequency()*60)
                 
-                self.update_PIDs(r_RPM, None)
+                self.update_PIDs(self.r_RPM, None)
 
                 # RPM_mult = 0.012*power/abs(power)
                 # output = (self.right_duty.getFrequency()-self.left_duty.getFrequency())*RPM_mult
@@ -78,7 +78,7 @@ class LaunchWheels:
                 self.power_out += power+self.left_PID.get_power()*self.PID_mult
                 self.l_launch_motor.set(self.power_out)
 
-                wpilib.SmartDashboard.putNumber("rpm dif", dif)
+                #wpilib.SmartDashboard.putNumber("rpm dif", dif)
                 wpilib.SmartDashboard.putNumber("rpm pow", self.power_out)
                 # print("{} - {} = {} => 0: {} + {}".format(self.right_duty.getFrequency(), self.left_duty.getFrequency(), dif, power, self.left_PID.get_power()*direction ))
         else:
@@ -103,7 +103,8 @@ class LaunchWheels:
         self.r_RPM = self.left_duty.getFrequency()*-r_direction
 
         l_dif = l_target - self.l_RPM
-        r_dif = r_target - self.r_RPM
+        if r_target is not None:
+            r_dif = r_target - self.r_RPM
 
         self.left_PID.update_position(l_dif)
         self.left_PID.main_loop()

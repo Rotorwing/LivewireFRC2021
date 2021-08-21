@@ -178,8 +178,8 @@ class MyRobot(wpilib.TimedRobot):
         elif self.get_button(climb_unlock_button):
             self.climb.unlock()
 
-        if wpilib.DriverStation.getMatchTime() < 2:
-            self.climb.lock()
+        #if wpilib.DriverStation.getMatchTime() < 2:
+        #    self.climb.lock()
 
     def disabledInit(self):
         self.launch.launch_wheels.disable()
