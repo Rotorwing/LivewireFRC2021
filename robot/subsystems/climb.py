@@ -10,9 +10,9 @@ class Climb:
         self.rail = Talon(climb_motor_port)
         self.lift = PWMVictorSPX(climb_angle_motor_port)
 
-        self.lock_in = 90
+        self.lock_in = 55
         self.lock_out = 0
-        self.lock = Servo(climb_latch_servo_port)
+        self.latch = Servo(climb_latch_servo_port)
         self.locked = False
 
 
@@ -23,12 +23,12 @@ class Climb:
         self.lift.set(0)
 
     def lock(self):
-        self.lock.set(self.lock_in)
+        self.latch.setAngle(self.lock_in)
         self.disable()
         self.locked = True
 
     def unlock(self):
-        self.lock.set(self.lock_out)
+        self.latch.setAngle(self.lock_out)
         self.locked = False
 
     def extend(self):
