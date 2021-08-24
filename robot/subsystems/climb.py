@@ -39,7 +39,7 @@ class Climb:
         self.rail.set(1)
 
     def raise_arm(self):
-        self.lift(1)
+        self.lift.set(1)
 
     def lower_arm(self):
         self.lift.set(-1)
