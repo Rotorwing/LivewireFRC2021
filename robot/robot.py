@@ -32,12 +32,6 @@ class MyRobot(wpilib.TimedRobot):
 
         #self.launchWheels = LaunchWheels()
         self.drivetrain = Drive()
-        # self.autoVoltageConstraint = constraint.DifferentialDriveVoltageConstraint(
-        #                                                                       SimpleMotorFeedforward(DriveConstants.ksVolts,
-        #                                                                       DriveConstants.kvVoltSecondsPerMeter,
-        #                                                                       DriveConstants.kaVoltSecondsSquaredPerMeter),
-        #                                                                       DriveConstants.kDriveKinematics,
-        #                                                                       10)
         self.drivetrain.set_trajectory_config(TrajectoryConfig(1.5, 0.25))
         #self.drivetrain.trajectory.addConstraint(autoVoltageConstraint)
 
@@ -56,7 +50,8 @@ class MyRobot(wpilib.TimedRobot):
         self.storage_motor = Talon(storage_motor_port)
 
         self.table = NetworkTables.getTable("datatable")
-        self.table.putString("Test", "1234")
+        self.RPM_entry = self.table.getEntry("RPM")
+        self.angle_entry = self.table.getEntry("angle")
 
         self.auto_mode = 0  # 0: fold out, 1: GO!
 
@@ -131,6 +126,11 @@ class MyRobot(wpilib.TimedRobot):
         if self.get_button(manual_fire_button):
             manual_power = self.aux_stick.getThrottle()
             self.launch.launch_wheels.set_follow_power(manual_power)
+        elif self.get_button(auto_fire_button):
+            self.launch.launch_wheels.set_follow_RPM(self.RPM_entry.getDouble())
+            self.launch.arms.set_angle(self.angle_entry.getDouble())
+            self.launch.arms.main()
+            
         self.launch.arms.main()
         #wpilib.SmartDashboard.putNumber("Launch Power", manual_power)
         wpilib.SmartDashboard.putNumber("Launch Angle", self.launch.arms.angle)
@@ -149,7 +149,7 @@ class MyRobot(wpilib.TimedRobot):
         # ------- < Intake > -------
         if self.get_button(sweep_button):
             self.intake()
-        elif self.aux_stick.getRawButton(1):
+        elif self.get_button(fire_button):
             self.feed_out()
         else:
             self.disable_feed()

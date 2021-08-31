@@ -2,6 +2,7 @@ sweep_button = (2, "drive")
 speed_boost_button = (1, "drive")
 
 manual_fire_button = (2, "aux")
+fire_button = (7, "aux")
 auto_fire_button = (1, "aux")
 back_sweep_button = (7, "drive")
 
