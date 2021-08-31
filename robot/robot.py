@@ -30,6 +30,8 @@ class MyRobot(wpilib.TimedRobot):
     def robotInit(self):
         print("< Robot Code Started >")
 
+        self.PDB = wpilib.PowerDistributionPanel()
+
         #self.launchWheels = LaunchWheels()
         self.drivetrain = Drive()
         self.drivetrain.set_trajectory_config(TrajectoryConfig(1.5, 0.25))
@@ -96,7 +98,11 @@ class MyRobot(wpilib.TimedRobot):
             self.drivetrain.right_encoder.reset()
             self.drivetrain.disable()
 
-        self.drivetrain.run_trajectory()
+        #self.drivetrain.run_trajectory()
+        self.launch.launch_wheels.set_follow_RPM(self.RPM_entry.getDouble())
+        self.launch.arms.set_angle(self.angle_entry.getDouble())
+        self.drivetrain.target_to(self.X_entry.getDouble())
+        self.launch.arms.main()
 
         self.auto_mode = 1
 
@@ -155,6 +161,7 @@ class MyRobot(wpilib.TimedRobot):
         # ------- < Intake > -------
         if self.get_button(sweep_button):
             self.intake()
+            self.launch.arms.set_angle(0)
         elif self.get_button(fire_button):
             self.feed_out()
         else:
@@ -166,6 +173,7 @@ class MyRobot(wpilib.TimedRobot):
         # <*> <*> <*> <*> <*> <*> <*>
         #  ------- < Climb > -------
         if self.get_button(climb_extend_button):
+            if self.PDB.getCurrent()
             self.climb.extend()
         elif self.get_button(climb_retract_button):
             self.climb.retract()
