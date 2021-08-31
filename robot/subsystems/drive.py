@@ -47,6 +47,8 @@ class Drive:
         self.vx_PID.set_min_power(-0.5)  # ramp down (2 frames)
         self.omega_PID = PID(0.09, 0.02, 0.01)
 
+        self.angle_PID = PID(0.1, 0.05, 0)
+
         self.power_out = 0
         self.turn_out = 0
 
@@ -201,3 +203,9 @@ class Drive:
             self.right_motor.set(0)
 
         # self.last_time = time()
+
+    def target_to(self, angle):
+        self.angle_PID.update_position(angle)
+        self.angle_PID.main_loop()
+        pwr = self.angle_PID.get_power()
+        self.arcade_drive(pwr, 0, 1, 1)

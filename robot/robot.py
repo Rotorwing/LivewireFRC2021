@@ -52,8 +52,11 @@ class MyRobot(wpilib.TimedRobot):
         self.table = NetworkTables.getTable("datatable")
         self.RPM_entry = self.table.getEntry("RPM")
         self.angle_entry = self.table.getEntry("angle")
+        self.X_entry = self.table.getEntry("X")
 
         self.auto_mode = 0  # 0: fold out, 1: GO!
+
+        self.autoing_launch = False
 
 
     def autonomousInit(self):
@@ -126,23 +129,26 @@ class MyRobot(wpilib.TimedRobot):
         if self.get_button(manual_fire_button):
             manual_power = self.aux_stick.getThrottle()
             self.launch.launch_wheels.set_follow_power(manual_power)
+            self.autoing_launch = False
         elif self.get_button(auto_fire_button):
             self.launch.launch_wheels.set_follow_RPM(self.RPM_entry.getDouble())
             self.launch.arms.set_angle(self.angle_entry.getDouble())
-            self.launch.arms.main()
+
+            if not self.autoing_launch:
+                self.drivetrain.angle_PID.reset_int()
+            
+            self.drivetrain.target_to(self.X_entry.getDouble())
+            self.autoing_launch = True
+        else:
+            self.launch.launch_wheels.disable()
+            self.autoing_launch = False
             
         self.launch.arms.main()
         #wpilib.SmartDashboard.putNumber("Launch Power", manual_power)
         wpilib.SmartDashboard.putNumber("Launch Angle", self.launch.arms.angle)
-        # else:
-        #     self.launch.launch_wheels.set_follow_power(0)
 
-        # if self.aux_stick.getRawButton(1):
-        #     print((self.aux_stick.getY()+1)/2*45, self.launch.arms.angle)
-        #     self.launch.set_angle(max((self.aux_stick.getY())*60, 0))
-        #     self.launch.main()
-        # else:
-        self.launch.arms.set(self.aux_stick.getY()*0.75)
+        if not self.autoing_launch:
+            self.launch.arms.set(self.aux_stick.getY()*0.75)
             # print(self.launch.arms.angle)  # , self.launch.arms.analog.getVoltage()
 
         # <*> <*> <*> <*> <*> <*> <*>
