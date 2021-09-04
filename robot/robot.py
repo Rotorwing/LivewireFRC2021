@@ -55,11 +55,13 @@ class MyRobot(wpilib.TimedRobot):
         self.RPM_entry = self.table.getEntry("RPM")
         self.angle_entry = self.table.getEntry("angle")
         self.X_entry = self.table.getEntry("X")
+        self.vision_freeze = self.table.getEntry("frozen")
 
         self.auto_mode = 0  # 0: fold out, 1: GO!
 
         self.autoing_launch = False
 
+        self.climb_amp_timer = 0
 
     def autonomousInit(self):
         self.timer.reset()
@@ -99,10 +101,17 @@ class MyRobot(wpilib.TimedRobot):
             self.drivetrain.disable()
 
         #self.drivetrain.run_trajectory()
-        self.launch.launch_wheels.set_follow_RPM(self.RPM_entry.getDouble())
-        self.launch.arms.set_angle(self.angle_entry.getDouble())
-        self.drivetrain.target_to(self.X_entry.getDouble())
+        self.launch.launch_wheels.set_follow_RPM(self.RPM_entry.getDouble(0))
+        self.launch.arms.set_angle(self.angle_entry.getDouble(0))
+        self.drivetrain.target_to(self.X_entry.getDouble(0))
         self.launch.arms.main()
+
+        if self.drivetrain.angle_PID.on_target():
+            self.vision_freeze.setBoolean(True)
+            if self.launch.launch_wheels.on_target() and self.launch.arms.angle_PID.on_target():
+                self.feed_out()
+        else:
+            self.vision_freeze.setBoolean(False)
 
         self.auto_mode = 1
 
@@ -137,17 +146,18 @@ class MyRobot(wpilib.TimedRobot):
             self.launch.launch_wheels.set_follow_power(manual_power)
             self.autoing_launch = False
         elif self.get_button(auto_fire_button):
-            self.launch.launch_wheels.set_follow_RPM(self.RPM_entry.getDouble())
-            self.launch.arms.set_angle(self.angle_entry.getDouble())
+            self.launch.launch_wheels.set_follow_RPM(self.RPM_entry.getDouble(0))
+            self.launch.arms.set_angle(self.angle_entry.getDouble(0))
 
             if not self.autoing_launch:
                 self.drivetrain.angle_PID.reset_int()
             
-            self.drivetrain.target_to(self.X_entry.getDouble())
+            self.drivetrain.target_to(self.X_entry.getDouble(0))
             self.autoing_launch = True
         else:
             self.launch.launch_wheels.disable()
             self.autoing_launch = False
+            
             
         self.launch.arms.main()
         #wpilib.SmartDashboard.putNumber("Launch Power", manual_power)
@@ -172,13 +182,25 @@ class MyRobot(wpilib.TimedRobot):
 
         # <*> <*> <*> <*> <*> <*> <*>
         #  ------- < Climb > -------
+        wpilib.SmartDashboard.putNumber("climb_current", self.PDB.getCurrent(3))
         if self.get_button(climb_extend_button):
-            if self.PDB.getCurrent()
+            if self.climb.extended == -1:
+                self.climb.extended = 0
+
+            if self.climb_amp_timer > 10 and self.PDB.getCurrent(3) > 12:
+                self.climb.extended = 1
             self.climb.extend()
+            self.climb_amp_timer += 1
         elif self.get_button(climb_retract_button):
+            if self.climb.extended ==1:
+                self.climb.extended = 0
+            
+            #if self.PDB.getCurrent() > 1000:
+            #    self.climb.extended = -1
             self.climb.retract()
         else:
             self.climb.rail.set(0)
+            self.climb_amp_timer = 0
 
         if self.get_button(climb_raise_button):
             self.climb.raise_arm()

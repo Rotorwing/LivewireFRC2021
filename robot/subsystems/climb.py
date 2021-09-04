@@ -15,7 +15,7 @@ class Climb:
         self.latch = Servo(climb_latch_servo_port)
         self.locked = False
 
-
+        self.extended = 0
         # Possibly use current sensors in PDB the detect end points?
 
     def disable(self):
@@ -32,11 +32,17 @@ class Climb:
         self.locked = False
 
     def extend(self):
-        if not self.locked:
-            self.rail.set(-0.75)
+
+        if not self.locked and not self.extended == 1:
+            self.rail.set(0.75)
+        else:
+            self.rail.set(0)
 
     def retract(self):
-        self.rail.set(1)
+        if not self.locked and not self.extended == -1:
+            self.rail.set(-1)
+        else:
+            self.rail.set(0)
 
     def raise_arm(self):
         self.lift.set(1)

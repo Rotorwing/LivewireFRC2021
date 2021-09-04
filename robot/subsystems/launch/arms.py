@@ -1,5 +1,5 @@
 from wpilib import Talon, DigitalInput, AnalogInput, Counter, AnalogTriggerOutput, AnalogTrigger, AnalogTriggerType
-
+import wpilib
 try:
     from tachometer import *
     from PIDobj import *
@@ -69,8 +69,9 @@ class Arms:
         if self.angle == 0 and self.lower_limit.get():
             self.angle +=2
 
-        #self.arm_motor.set(power)
+        self.arm_motor.set(power)
         self.last = raw_angle
+        wpilib.SmartDashboard.putNumber("arm_angle", self.angle)
 
     def disable(self):
         self.arm_motor.disable()

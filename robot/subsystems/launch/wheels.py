@@ -27,11 +27,13 @@ class LaunchWheels:
         self.left_PID.set_max_power(0.25)
         self.left_PID.set_min_power(-0.25)
         self.left_PID.set_target(0)  # aim for 0 RPM dif
+        self.left_PID.on_target_pos_error = 2
 
         self.right_PID = PID(self.left_PID.P, self.left_PID.I, self.left_PID.D)
         self.right_PID.set_max_power(0.25)
         self.right_PID.set_min_power(-0.25)
         self.right_PID.set_target(0)  # aim for 0 RPM dif
+        self.right_PID.on_target_pos_error = 2
 
         self.PID_mult = 1.0
 
@@ -47,12 +49,13 @@ class LaunchWheels:
 
 
     def set_follow_RPM(self, RPM):
-        raise NotImplementedError
-        feed_forward = RPM/5000
+        #raise NotImplementedError
+        feed_forward = RPM/170
         self.update_PIDs(RPM, RPM)
-        l_launch_motor.set(feed_forward+self.left_PID.get_power()*self.PID_mult)
-        r_launch_motor.set(feed_forward+self.right_PID.get_power()*self.PID_mult)
-
+        self.l_launch_motor.set(feed_forward+self.left_PID.get_power()*self.PID_mult)
+        self.r_launch_motor.set(feed_forward+self.right_PID.get_power()*self.PID_mult)
+        wpilib.SmartDashboard.putNumber("l_rpm", self.l_RPM)
+        wpilib.SmartDashboard.putNumber("r_rpm", self.r_RPM)
 
     def set_follow_power(self, power):
         if time()-self.last_loop > 2:
@@ -136,3 +139,10 @@ class LaunchWheels:
     def stop_tachs(self):
         self.left_tach.stop_thread()
         self.right_tach.stop_thread()
+
+
+    def on_target(self):
+        if self.left_PID.I == 0:
+            return self.right_PID.on_target()
+        else:
+            return self.right_PID.on_target() and self.right_PID.on_target()
