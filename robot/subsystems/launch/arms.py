@@ -45,7 +45,7 @@ class Arms:
             _power = max(_power, 0)
         self.arm_motor.set(_power)
 
-    def main(self):
+    def main(self, auto):
         if (self.arm_motor.get() >= 0)*2-1 != self.direction:
             self.direction = -1* self.direction
             #self.angle_counter.setReverseDirection(True)
@@ -69,7 +69,8 @@ class Arms:
         if self.angle == 0 and self.lower_limit.get():
             self.angle +=2
 
-        self.arm_motor.set(power)
+        if auto:
+            self.arm_motor.set(power)
         self.last = raw_angle
         wpilib.SmartDashboard.putNumber("arm_angle", self.angle)
 

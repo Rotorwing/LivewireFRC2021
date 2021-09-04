@@ -99,19 +99,22 @@ class MyRobot(wpilib.TimedRobot):
             self.drivetrain.left_encoder.reset()
             self.drivetrain.right_encoder.reset()
             self.drivetrain.disable()
+            self.launch.launch_wheels.left_PID.reset_int()
+            self.launch.launch_wheels.right_PID.reset_int()
 
         #self.drivetrain.run_trajectory()
-        self.launch.launch_wheels.set_follow_RPM(self.RPM_entry.getDouble(0))
-        self.launch.arms.set_angle(self.angle_entry.getDouble(0))
-        self.drivetrain.target_to(self.X_entry.getDouble(0))
-        self.launch.arms.main()
+        if not self.RPM_entry.getDouble(0) == -1:
+            self.launch.launch_wheels.set_follow_RPM(self.RPM_entry.getDouble(0))
+            self.launch.arms.set_angle(self.angle_entry.getDouble(0))
+            self.drivetrain.target_to(self.X_entry.getDouble(0))
+            self.launch.arms.main(True)
 
-        if self.drivetrain.angle_PID.on_target():
-            self.vision_freeze.setBoolean(True)
-            if self.launch.launch_wheels.on_target() and self.launch.arms.angle_PID.on_target():
-                self.feed_out()
-        else:
-            self.vision_freeze.setBoolean(False)
+            if self.drivetrain.angle_PID.on_target():
+                self.vision_freeze.setBoolean(True)
+                if self.launch.launch_wheels.on_target() and self.launch.arms.angle_PID.on_target():
+                    self.feed_out()
+            else:
+                self.vision_freeze.setBoolean(False)
 
         self.auto_mode = 1
 
@@ -157,9 +160,10 @@ class MyRobot(wpilib.TimedRobot):
         else:
             self.launch.launch_wheels.disable()
             self.autoing_launch = False
+        
             
-            
-        self.launch.arms.main()
+        self.launch.arms.main(self.autoing_launch)    
+        
         #wpilib.SmartDashboard.putNumber("Launch Power", manual_power)
         wpilib.SmartDashboard.putNumber("Launch Angle", self.launch.arms.angle)
 
