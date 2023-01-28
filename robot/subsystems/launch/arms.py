@@ -24,13 +24,13 @@ class Arms:
         self.error = 0
         self.angle = 0
         self.last = 0
-        self.direction = True  # True: up, False: down
+        self.direction = False  # True: up, False: down
 
         self.top_limit = DigitalInput(top_launch_limit_port)
         self.lower_limit = DigitalInput(bottom_launch_limit_port)
 
-        self.angle_PID = PID(0.02, 0.02, 0)  #0.027, 0.01, 0.001)
-        self.angle_PID.set_on_target_error(5, 0.3)
+        self.angle_PID = PID(0.03,0, 0)#, 0.01, 0.0)  #0.027, 0.01, 0.001)
+        self.angle_PID.set_on_target_error(3, 0.3)
         self.angle_PID.set_max_power(0.75)
         self.angle_PID.set_min_power(-0.5)
 
@@ -46,9 +46,11 @@ class Arms:
         self.arm_motor.set(_power)
 
     def main(self, auto):
-        if (self.arm_motor.get() >= 0)*2-1 != self.direction:
-            self.direction = -1* self.direction
-            #self.angle_counter.setReverseDirection(True)
+
+        if self.arm_motor.get() >= 0:
+            self.direction = 1
+        else:
+            self.direction = -1
 
         raw_angle = self.angle_counter.get()
         delta_angle = int((raw_angle-self.last)/174.9*360)
@@ -57,14 +59,14 @@ class Arms:
         self.angle_PID.update_position(self.angle)
         self.angle_PID.main_loop()
         power = self.angle_PID.get_power()
-        print("power "+str(power), "direction "+str(self.direction))
+        #print("power "+str(power), "direction "+str(self.direction))
 
         if not self.top_limit.get():
             power = min(power, 0)
+            self.angle = 61
         if not self.lower_limit.get():
             power = max(power, 0)
             self.angle = 0
-            print("bottom")
 
         if self.angle == 0 and self.lower_limit.get():
             self.angle +=2

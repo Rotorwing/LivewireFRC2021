@@ -27,13 +27,13 @@ class LaunchWheels:
         self.left_PID.set_max_power(0.25)
         self.left_PID.set_min_power(-0.25)
         self.left_PID.set_target(0)  # aim for 0 RPM dif
-        self.left_PID.on_target_pos_error = 10
+        self.left_PID.on_target_pos_error = 8
 
         self.right_PID = PID(self.left_PID.P, self.left_PID.I, self.left_PID.D)
         self.right_PID.set_max_power(0.25)
         self.right_PID.set_min_power(-0.25)
         self.right_PID.set_target(0)  # aim for 0 RPM dif
-        self.right_PID.on_target_pos_error = 10
+        self.right_PID.on_target_pos_error = 8
 
         self.PID_mult = 1.0
 
@@ -50,12 +50,23 @@ class LaunchWheels:
 
     def set_follow_RPM(self, RPM):
         #raise NotImplementedError
-        feed_forward = (RPM+4.4)/158.18
-        self.l_launch_motor.set(feed_forward+self.left_PID.get_power()*self.PID_mult)
-        self.r_launch_motor.set(feed_forward+self.right_PID.get_power()*self.PID_mult)
+        
+        feed_forward = (RPM+4.4)/158.18 #(RPM+4.4)/158.18
+        lpower = feed_forward
+        rpower = feed_forward
         self.update_PIDs(RPM, RPM)
+        if abs(self.l_RPM-RPM) < 15:
+            lpower+=self.left_PID.get_power()*self.PID_mult
+            rpower+=self.right_PID.get_power()*self.PID_mult
+        else:
+            self.left_PID.reset_int()
+            self.right_PID.reset_int()
+        self.l_launch_motor.set(lpower)
+        self.r_launch_motor.set(rpower)
         wpilib.SmartDashboard.putNumber("l_rpm", self.l_RPM)
         wpilib.SmartDashboard.putNumber("r_rpm", self.r_RPM)
+        wpilib.SmartDashboard.putNumber("PID_L", self.left_PID.get_power())
+        wpilib.SmartDashboard.putNumber("PID_R", self.right_PID.get_power())
 
     def set_follow_power(self, power):
         if time()-self.last_loop > 2:
@@ -123,10 +134,10 @@ class LaunchWheels:
 
         if r_target is not None:
             self.right_PID.update_position(-r_dif)
+            self.right_PID.main_loop()
         else:
             self.right_PID.update_position(0)
             self.right_PID.reset_int()
-        self.right_PID.main_loop()
 
     def disable(self):
         self.r_launch_motor.set(0)

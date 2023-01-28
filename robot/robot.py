@@ -57,17 +57,20 @@ class MyRobot(wpilib.TimedRobot):
         self.X_entry = self.table.getEntry("X")
         self.vision_freeze = self.table.getEntry("frozen")
 
-        self.auto_mode = 0  # 0: fold out, 1: GO!
+        self.auto_mode = 0  # 0: fold out, 1: shoot, 2:drive
+        self.t_timer = 0
 
         self.autoing_launch = False
+        self.lock_vision = False
 
         self.climb_amp_timer = 0
 
     def autonomousInit(self):
+        self.vision_freeze.setBoolean(False)
         self.timer.reset()
         self.timer.start()
-        self.drivetrain.set_pathweaver_json("/home/lvuser/py/paths/PathWeaver/output/main.wpilib.json")
-        self.drivetrain.odometry.resetPosition(self.drivetrain.trajectory.sample(0).pose, Rotation2d(0))  # Pose2d(Translation2d(0.6298702570379434, 0.621787025703795), Rotation2d(0)), Rotation2d(0))
+        #self.drivetrain.set_pathweaver_json("/home/lvuser/py/paths/PathWeaver/output/main.wpilib.json")
+        #self.drivetrain.odometry.resetPosition(self.drivetrain.trajectory.sample(0).pose, Rotation2d(0))  # Pose2d(Translation2d(0.6298702570379434, 0.621787025703795), Rotation2d(0)), Rotation2d(0))
         # self.drivetrain.set_waypoints(
         # # Start at the origin facing the +X direction
         # Pose2d(0, 0, Rotation2d(0)),
@@ -81,11 +84,18 @@ class MyRobot(wpilib.TimedRobot):
         # # End 3 meters straight ahead of where we started, facing forward
         # Pose2d(6.5, 2, Rotation2d.fromDegrees(90))
         # )
-        for timer in range(0, 50):
-            timer /= 10
-            ramsete_out = self.drivetrain.ramsete.calculate(self.drivetrain.odometry.getPose(), self.drivetrain.trajectory.sample(timer))
-            print(ramsete_out)
-        print(" < end preview > ")
+        #for timer in range(0, 50):
+        #    timer /= 10
+        #    ramsete_out = self.drivetrain.ramsete.calculate(self.drivetrain.odometry.getPose(), self.drivetrain.trajectory.sample(timer))
+        #    print(ramsete_out)
+        #print(" < end preview > ")
+        self.drivetrain.left_encoder.reset()
+        self.drivetrain.right_encoder.reset()
+        self.drivetrain.disable()
+        self.launch.launch_wheels.left_PID.reset_int()
+        self.launch.launch_wheels.right_PID.reset_int()
+        self.launch.arms.angle_PID.reset_int()
+        self.t_timer = 0
 
     def autonomousPeriodic(self):
         # if self.timer.get() < 3.5:
@@ -96,30 +106,49 @@ class MyRobot(wpilib.TimedRobot):
         #     self.launch.arms.set(0)
         #     self.intake()
         if self.auto_mode == 0:
-            self.drivetrain.left_encoder.reset()
-            self.drivetrain.right_encoder.reset()
-            self.drivetrain.disable()
-            self.launch.launch_wheels.left_PID.reset_int()
-            self.launch.launch_wheels.right_PID.reset_int()
+            self.auto_mode = 1
 
         #self.drivetrain.run_trajectory()
-        if not self.RPM_entry.getDouble(0) == -1:
-            self.launch.launch_wheels.set_follow_RPM(self.RPM_entry.getDouble(0))
-            self.launch.arms.set_angle(self.angle_entry.getDouble(0))
-            self.drivetrain.target_to(self.X_entry.getDouble(0))
-            self.launch.arms.main(True)
-
-            if self.drivetrain.angle_PID.on_target():
+        if self.auto_mode == 1:
+            if True:  # not self.RPM_entry.getDouble(-1) == -1:
+                self.launch.launch_wheels.set_follow_RPM(90)
+                self.launch.arms.set_angle(55)
+                self.drivetrain.setBatV(self.ds.getBatteryVoltage())
+                self.launch.arms.main(True)
+                
                 self.vision_freeze.setBoolean(True)
-                if self.launch.launch_wheels.on_target() and self.launch.arms.angle_PID.on_target():
-                    self.feed_out()
+                if self.launch.arms.angle_PID.on_target():
+                    if self.launch.launch_wheels.on_target():
+                        self.lock_vision = True
+                else:
+                    self.vision_freeze.setBoolean(False)
+                
+                if self.lock_vision:
+                    if self.timer.get()-self.t_timer > 1:
+                        self.feed_out(0.4)
+                    if self.timer.get()-self.t_timer > 8:
+                        self.disable_feed()
+                        self.launch.launch_wheels.disable()
+                        self.launch.arms.set_angle(0)
+                        self.auto_mode = 2
+                        self.t_timer = self.timer.get()
+                else:
+                    self.t_timer = self.timer.get()
             else:
-                self.vision_freeze.setBoolean(False)
-
-        self.auto_mode = 1
-
-        if self.drive_stick.getRawButton(1) or self.aux_stick.getRawButton(1):
-                self.drivetrain.E_Stop = True
+                print("<VISION ERROR>")
+        if self.auto_mode == 2:
+            self.launch.launch_wheels.set_follow_power(0.2)
+            self.launch.arms.set_angle(0)
+            self.launch.arms.main(True)
+            if self.timer.get()-self.t_timer < 2:
+                self.drivetrain.arcade_drive(0, -0.8, 1, 1)
+            if self.timer.get()-self.t_timer < 4.5:
+                self.climb.lower_arm()
+            self.intake()
+            if self.timer.get()-self.t_timer > 5.8:
+                self.auto_mode = 3
+        
+        
 
     def teleopInit(self):
         self.climb.unlock()
@@ -148,20 +177,41 @@ class MyRobot(wpilib.TimedRobot):
             manual_power = self.aux_stick.getThrottle()
             self.launch.launch_wheels.set_follow_power(manual_power)
             self.autoing_launch = False
-        elif self.get_button(auto_fire_button):
-            self.launch.launch_wheels.set_follow_RPM(self.RPM_entry.getDouble(0))
-            self.launch.arms.set_angle(self.angle_entry.getDouble(0))
+        elif self.get_button(auto_fire_button) or self.get_button(trench_fire_button):
+            if True: # not self.RPM_entry.getDouble(-1) == -1:
+                if self.get_button(manual_fire_button):
+                    self.feed_out()
+                if self.get_button(trench_fire_button):
+                    self.launch.launch_wheels.set_follow_RPM(110)
+                    self.launch.arms.set_angle(45)
+                else:
+                    self.launch.launch_wheels.set_follow_RPM(90)
+                    self.launch.arms.set_angle(55)
 
-            if not self.autoing_launch:
-                self.drivetrain.angle_PID.reset_int()
-            
-            self.drivetrain.target_to(self.X_entry.getDouble(0))
-            self.autoing_launch = True
+                if not self.autoing_launch:
+                    self.drivetrain.angle_PID.reset_int()
+                self.autoing_launch = True
+                self.vision_freeze.setBoolean(True)
+                if self.launch.arms.angle_PID.on_target():
+                    
+                    if self.launch.launch_wheels.on_target():
+                        self.feed_out(0.75)
+                        self.lock_vision = True
+                else:
+                    self.vision_freeze.setBoolean(False)
+                
+                if self.lock_vision:
+                    pass
+                else:
+                    self.disable_feed()
         else:
             self.launch.launch_wheels.disable()
-            self.autoing_launch = False
+            if self.lock_vision:
+                self.launch.arms.set_angle(0)
+                self.lock_vision = False
+            if self.launch.arms.angle_PID.on_target():
+                self.autoing_launch = False
         
-            
         self.launch.arms.main(self.autoing_launch)    
         
         #wpilib.SmartDashboard.putNumber("Launch Power", manual_power)
@@ -176,9 +226,7 @@ class MyRobot(wpilib.TimedRobot):
         if self.get_button(sweep_button):
             self.intake()
             self.launch.arms.set_angle(0)
-        elif self.get_button(fire_button):
-            self.feed_out()
-        else:
+        elif not self.autoing_launch:
             self.disable_feed()
 
         if self.get_button(back_sweep_button):
@@ -233,8 +281,8 @@ class MyRobot(wpilib.TimedRobot):
         self.storage_motor.set(0)
         self.intake_motor.set(0)
 
-    def feed_out(self):
-        self.storage_motor.set(0.25)
+    def feed_out(self, speed):
+        self.storage_motor.set(speed)
         self.stage_motor.set(-1)
 
     def intake(self):

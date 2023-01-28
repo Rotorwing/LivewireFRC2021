@@ -47,8 +47,8 @@ class Drive:
         self.vx_PID.set_min_power(-0.5)  # ramp down (2 frames)
         self.omega_PID = PID(0.09, 0.02, 0.01)
 
-        self.angle_PID = PID(0.3, 0.3, 0.05)
-        self.angle_PID.on_target_pos_error = 50
+        self.angle_PID = PID(0.01, 0.002, 0.0) #(0.3, 0.3, 0.05)
+        self.angle_PID.set_on_target_error(10, 1)
         self.angle_PID.max_power = 0.25
         self.angle_PID.min_power = -0.25
 
@@ -105,6 +105,7 @@ class Drive:
         self.right_motor.set(0)
         self.vx_PID.reset_int()
         self.omega_PID.reset_int()
+        self.angle_PID.reset_int()
         self.left_encoder.reset()
         self.right_encoder.reset()
 
@@ -211,4 +212,10 @@ class Drive:
         self.angle_PID.update_position(angle)
         self.angle_PID.main_loop()
         pwr = self.angle_PID.get_power()
-        self.arcade_drive(-pwr, 0, 1, 1)
+        wpilib.SmartDashboard.putNumber("X_pwr", pwr)
+        if abs(angle) > 8:
+            self.left_motor.set(-pwr)
+            self.right_motor.set(-pwr)
+        else:
+            self.left_motor.set(0)
+            self.right_motor.set(0)
